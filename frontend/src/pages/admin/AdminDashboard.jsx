@@ -105,27 +105,27 @@ const AdminDashboard = () => {
 
       setStats({
         totalTeachers: teachersResponse.status === 'fulfilled' ? 
-          (teachersResponse.value?.data?.results?.length || teachersResponse.value?.data?.data?.length || teachersResponse.value?.data?.length || 0) : 0,
+          (teachersResponse.value?.data?.teachers?.length || 0) : 0,
         totalStudents: studentsResponse.status === 'fulfilled' ? 
-          (studentsResponse.value?.data?.results?.length || studentsResponse.value?.data?.data?.length || studentsResponse.value?.data?.length || 0) : 0,
+          (studentsResponse.value?.data?.students?.length || 0) : 0,
         totalSubjects: subjectsResponse.status === 'fulfilled' ? 
-          (subjectsResponse.value?.data?.results?.length || subjectsResponse.value?.data?.data?.length || subjectsResponse.value?.data?.length || 0) : 0,
+          (subjectsResponse.value?.data?.subjects?.length || 0) : 0,
         totalPrograms: programsResponse.status === 'fulfilled' ? 
-          (programsResponse.value?.data?.results?.length || programsResponse.value?.data?.data?.length || programsResponse.value?.data?.length || 0) : 0,
+          (programsResponse.value?.data?.programs?.length || 0) : 0,
         totalAcademicYears: academicYearsResponse.status === 'fulfilled' ? 
-          (academicYearsResponse.value?.data?.results?.length || academicYearsResponse.value?.data?.data?.length || academicYearsResponse.value?.data?.length || 0) : 0,
+          (academicYearsResponse.value?.data?.academicYears?.length || 0) : 0,
         totalAcademicTerms: academicTermsResponse.status === 'fulfilled' ? 
-          (academicTermsResponse.value?.data?.results?.length || academicTermsResponse.value?.data?.data?.length || academicTermsResponse.value?.data?.length || 0) : 0,
+          (academicTermsResponse.value?.data?.academicTerms?.length || 0) : 0,
         totalClassLevels: classLevelsResponse.status === 'fulfilled' ? 
-          (classLevelsResponse.value?.data?.results?.length || classLevelsResponse.value?.data?.data?.length || classLevelsResponse.value?.data?.length || 0) : 0,
+          (classLevelsResponse.value?.data?.classes?.length || 0) : 0,
         totalYearGroups: yearGroupsResponse.status === 'fulfilled' ? 
-          (yearGroupsResponse.value?.data?.results?.length || yearGroupsResponse.value?.data?.data?.length || yearGroupsResponse.value?.data?.length || 0) : 0,
+          (yearGroupsResponse.value?.data?.yearGroups?.length || 0) : 0,
         totalExams: examsResponse.status === 'fulfilled' ? 
-          (examsResponse.value?.data?.results?.length || examsResponse.value?.data?.data?.length || examsResponse.value?.data?.length || 0) : 0,
+          (examsResponse.value?.data?.exams?.length || 0) : 0,
         totalQuestions: questionsResponse.status === 'fulfilled' ? 
-          (questionsResponse.value?.data?.results?.length || questionsResponse.value?.data?.data?.length || questionsResponse.value?.data?.length || 0) : 0,
+          (questionsResponse.value?.data?.questions?.length || 0) : 0,
         totalExamResults: examResultsResponse.status === 'fulfilled' ? 
-          (examResultsResponse.value?.data?.results?.length || examResultsResponse.value?.data?.data?.length || examResultsResponse.value?.data?.length || 0) : 0,
+          (examResultsResponse.value?.data?.data?.length || 0) : 0,
         loading: false,
         error: null
       });
@@ -191,12 +191,12 @@ const AdminDashboard = () => {
       description: 'Akademik mövsüm sayı'
     },
     {
-      title: 'Sinif Səviyyələri',
+      title: 'Siniflər',
       value: stats.totalClassLevels,
       icon: <Layers />,
       color: 'warning',
       link: '/admin/class-levels',
-      description: 'Sinif səviyyəsi sayı'
+      description: 'Siniflərin sayı'
     },
     {
       title: 'İl Qrupları',
@@ -236,7 +236,7 @@ const AdminDashboard = () => {
     {
       id: 1,
       type: 'admin_login',
-      message: `${user?.name || 'İdarəçi'} sistemə daxil oldu`,
+      message: `${user?.name || 'Admin'} sistemə daxil oldu`,
       time: 'İndi',
       icon: <AdminPanelSettings />,
       color: 'primary'
@@ -287,7 +287,7 @@ const AdminDashboard = () => {
     return (
       <Box>
         <Typography variant="h4" gutterBottom>
-          İdarəçi Paneli
+          Admin Paneli
         </Typography>
         <LinearProgress sx={{ my: 2 }} />
         <Typography color="text.secondary">

@@ -82,7 +82,7 @@ const Layout = ({ children }) => {
         { path: '/admin/students', label: 'Şagirdlər', icon: <School /> },
         { path: '/admin/academic-years', label: 'Tədris İlləri', icon: <CalendarMonth /> },
         { path: '/admin/academic-terms', label: 'Akademik Mövsümlər', icon: <DateRange /> },
-        { path: '/admin/class-levels', label: 'Sinif Səviyyələri', icon: <Layers /> },
+        { path: '/admin/class-levels', label: 'Siniflər', icon: <Layers /> },
         { path: '/admin/programs', label: 'Proqramlar', icon: <LibraryBooks /> },
         { path: '/admin/subjects', label: 'Fənlər', icon: <Book /> },
         { path: '/admin/year-groups', label: 'İl Qrupları', icon: <Groups /> },
@@ -195,26 +195,7 @@ const Layout = ({ children }) => {
         ))}
       </List>
 
-      {/* Sidebar Footer */}
-      <Box 
-        sx={{ 
-          position: 'absolute', 
-          bottom: 16, 
-          left: 16, 
-          right: 16,
-          p: 2,
-          borderRadius: 2,
-          backgroundColor: 'rgba(255,255,255,0.1)',
-          textAlign: 'center'
-        }}
-      >
-        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', mb: 1 }}>
-          💡 Məsləhət
-        </Typography>
-        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
-          Mobil versiyada menyunu açmaq üçün ☰ düyməsini basın
-        </Typography>
-      </Box>
+     
     </Box>
   );
 

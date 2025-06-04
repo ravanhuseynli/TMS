@@ -13,16 +13,11 @@ import {
   TableRow,
   Paper,
   IconButton,
-  Chip,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   TextField,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  Select,
   Grid,
   Alert,
   CircularProgress,
@@ -30,8 +25,6 @@ import {
   Avatar,
   TablePagination,
   InputAdornment,
-  Switch,
-  FormControlLabel,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -41,11 +34,8 @@ import {
   CalendarMonth as CalendarIcon,
   Visibility as ViewIcon,
   DateRange as DateIcon,
-  CheckCircle as ActiveIcon,
-  Cancel as InactiveIcon,
 } from '@mui/icons-material';
-
-const API_BASE_URL = 'http://127.0.0.1:8000';
+import { adminAPI } from '../../services/api';
 
 const AcademicYearsPage = () => {
   const [academicYears, setAcademicYears] = useState([]);
@@ -79,24 +69,12 @@ const AcademicYearsPage = () => {
   const fetchAcademicYears = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('adminToken');
-      const response = await fetch(`${API_BASE_URL}/academic-years`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setAcademicYears(data.academicYears || []);
-        setError('');
-      } else {
-        setError('Akademik illər yüklənərkən xəta baş verdi');
-      }
+      const response = await adminAPI.getAcademicYears();
+      setAcademicYears(response.data.academicYears || []);
+      setError('');
     } catch (error) {
       console.error('Error fetching academic years:', error);
-      setError('Akademik illər yüklənərkən xəta baş verdi');
+      setError('Akademik illər yüklənərkən xəta baş verdi: ' + (error.response?.data?.message || error.message));
       setAcademicYears([]);
     } finally {
       setLoading(false);
@@ -107,11 +85,11 @@ const AcademicYearsPage = () => {
     setDialogMode(mode);
     setSelectedYear(year);
     if (year && mode !== 'add') {
-      // Only use API documentation fields
+      // Only use API documentation fields, convert years to strings for form display
       setFormData({
         name: year.name || '',
-        fromYear: year.fromYear || '',
-        toYear: year.toYear || ''
+        fromYear: year.fromYear ? year.fromYear.toString() : '',
+        toYear: year.toYear ? year.toYear.toString() : ''
       });
     } else {
       setFormData({
@@ -144,8 +122,26 @@ const AcademicYearsPage = () => {
     const fromYear = parseInt(formData.fromYear);
     const toYear = parseInt(formData.toYear);
     
-    if (fromYear >= toYear) {
+    // Validate year range
+    if (formData.fromYear && (fromYear < 1900 || fromYear > 2100)) {
+      errors.fromYear = 'Başlanğıc ili 1900-2100 aralığında olmalıdır';
+    }
+    
+    if (formData.toYear && (toYear < 1900 || toYear > 2100)) {
+      errors.toYear = 'Bitmə ili 1900-2100 aralığında olmalıdır';
+    }
+    
+    if (fromYear && toYear && fromYear >= toYear) {
       errors.toYear = 'Bitmə ili başlanğıc ildən böyük olmalıdır';
+    }
+    
+    // Validate that years are integers
+    if (formData.fromYear && isNaN(fromYear)) {
+      errors.fromYear = 'Başlanğıc ili düzgün rəqəm olmalıdır';
+    }
+    
+    if (formData.toYear && isNaN(toYear)) {
+      errors.toYear = 'Bitmə ili düzgün rəqəm olmalıdır';
     }
     
     setFormErrors(errors);
@@ -157,36 +153,18 @@ const AcademicYearsPage = () => {
 
     try {
       setSubmitting(true);
-      const token = localStorage.getItem('adminToken');
+      
+      // Convert year values to numbers
+      const submitData = {
+        name: formData.name,
+        fromYear: parseInt(formData.fromYear),
+        toYear: parseInt(formData.toYear)
+      };
       
       if (dialogMode === 'add') {
-        const response = await fetch(`${API_BASE_URL}/academic-years`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(formData)
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Akademik il yaradılarkən xəta baş verdi');
-        }
+        await adminAPI.createAcademicYear(submitData);
       } else if (dialogMode === 'edit' && selectedYear) {
-        const response = await fetch(`${API_BASE_URL}/academic-years/${selectedYear._id}`, {
-          method: 'PATCH',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(formData)
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Akademik il yenilənərkən xəta baş verdi');
-        }
+        await adminAPI.updateAcademicYear(selectedYear._id, submitData);
       }
       
       await fetchAcademicYears();
@@ -194,7 +172,7 @@ const AcademicYearsPage = () => {
       setError('');
     } catch (error) {
       console.error('Error saving academic year:', error);
-      setError(error.message || 'Akademik il saxlanılarkən xəta baş verdi');
+      setError(error.response?.data?.message || 'Akademik il saxlanılarkən xəta baş verdi');
     } finally {
       setSubmitting(false);
     }
@@ -205,19 +183,7 @@ const AcademicYearsPage = () => {
 
     try {
       setSubmitting(true);
-      const token = localStorage.getItem('adminToken');
-      const response = await fetch(`${API_BASE_URL}/academic-years/${selectedYear._id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Akademik il silinərkən xəta baş verdi');
-      }
+      await adminAPI.deleteAcademicYear(selectedYear._id);
       
       await fetchAcademicYears();
       setDeleteConfirmOpen(false);
@@ -225,30 +191,24 @@ const AcademicYearsPage = () => {
       setError('');
     } catch (error) {
       console.error('Error deleting academic year:', error);
-      setError('Akademik il silinərkən xəta baş verdi');
+      setError(error.response?.data?.message || 'Akademik il silinərkən xəta baş verdi');
     } finally {
       setSubmitting(false);
     }
   };
 
+  // Filter academic years based on search
   const filteredYears = academicYears.filter(year =>
     year.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     year.fromYear?.toString().includes(searchTerm) ||
     year.toYear?.toString().includes(searchTerm)
   );
 
+  // Pagination
   const paginatedYears = filteredYears.slice(
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage
   );
-
-  const getStatusColor = (year) => {
-    return year.isCurrent ? 'success' : 'default';
-  };
-
-  const getStatusText = (year) => {
-    return year.isCurrent ? 'Cari il' : 'Deaktiv';
-  };
 
   if (loading) {
     return (
@@ -303,7 +263,6 @@ const AcademicYearsPage = () => {
                 variant="contained"
                 startIcon={<AddIcon />}
                 onClick={() => handleOpenDialog('add')}
-                size="large"
               >
                 Yeni Akademik İl
               </Button>
@@ -312,16 +271,15 @@ const AcademicYearsPage = () => {
         </CardContent>
       </Card>
 
-      {/* Academic Years Table */}
+      {/* Table */}
       <Card>
         <TableContainer>
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>Akademik İl</TableCell>
+                <TableCell>Ad</TableCell>
                 <TableCell>Başlanğıc İli</TableCell>
                 <TableCell>Bitmə İli</TableCell>
-                <TableCell>Status</TableCell>
                 <TableCell align="center">Əməliyyatlar</TableCell>
               </TableRow>
             </TableHead>
@@ -359,13 +317,6 @@ const AcademicYearsPage = () => {
                       </Typography>
                     </Box>
                   </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={getStatusText(year)}
-                      color={getStatusColor(year)}
-                      size="small"
-                    />
-                  </TableCell>
                   <TableCell align="center">
                     <Tooltip title="Bax">
                       <IconButton onClick={() => handleOpenDialog('view', year)}>
@@ -393,7 +344,7 @@ const AcademicYearsPage = () => {
               ))}
               {paginatedYears.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
+                  <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
                     <Typography variant="body1" color="text.secondary">
                       {searchTerm ? 'Axtarış nəticəsi tapılmadı' : 'Heç bir akademik il tapılmadı'}
                     </Typography>
@@ -425,65 +376,63 @@ const AcademicYearsPage = () => {
            dialogMode === 'edit' ? 'Akademik İli Düzəliş Et' : 'Akademik İl Məlumatları'}
         </DialogTitle>
         <DialogContent>
-          <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Akademik İl Adı"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                error={!!formErrors.name}
-                helperText={formErrors.name}
-                disabled={dialogMode === 'view'}
-                placeholder="Məsələn: 2023-2024 Tədris İli"
-              />
+          <Box sx={{ pt: 2 }}>
+            <Grid container spacing={3}>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Akademik İl Adı"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  error={!!formErrors.name}
+                  helperText={formErrors.name}
+                  disabled={dialogMode === 'view'}
+                  placeholder="Məs: 2023-2024 Akademik İl"
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Başlanğıc İli"
+                  type="number"
+                  value={formData.fromYear}
+                  onChange={(e) => setFormData({ ...formData, fromYear: e.target.value })}
+                  error={!!formErrors.fromYear}
+                  helperText={formErrors.fromYear}
+                  disabled={dialogMode === 'view'}
+                  placeholder="Məs: 2023"
+                  inputProps={{ min: 1900, max: 2100 }}
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Bitmə İli"
+                  type="number"
+                  value={formData.toYear}
+                  onChange={(e) => setFormData({ ...formData, toYear: e.target.value })}
+                  error={!!formErrors.toYear}
+                  helperText={formErrors.toYear}
+                  disabled={dialogMode === 'view'}
+                  placeholder="Məs: 2024"
+                  inputProps={{ min: 1900, max: 2100 }}
+                />
+              </Grid>
             </Grid>
-            
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Başlanğıc İli"
-                type="number"
-                value={formData.fromYear}
-                onChange={(e) => setFormData({ ...formData, fromYear: e.target.value })}
-                error={!!formErrors.fromYear}
-                helperText={formErrors.fromYear}
-                disabled={dialogMode === 'view'}
-                InputProps={{
-                  inputProps: { min: currentYear - 10, max: currentYear + 10 }
-                }}
-              />
-            </Grid>
-            
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Bitmə İli"
-                type="number"
-                value={formData.toYear}
-                onChange={(e) => setFormData({ ...formData, toYear: e.target.value })}
-                error={!!formErrors.toYear}
-                helperText={formErrors.toYear}
-                disabled={dialogMode === 'view'}
-                InputProps={{
-                  inputProps: { min: currentYear - 10, max: currentYear + 10 }
-                }}
-              />
-            </Grid>
-          </Grid>
+          </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog}>
-            {dialogMode === 'view' ? 'Bağla' : 'Ləğv et'}
+            İmtina
           </Button>
           {dialogMode !== 'view' && (
             <Button
-              onClick={handleSubmit} 
+              onClick={handleSubmit}
               variant="contained"
               disabled={submitting}
             >
               {submitting ? <CircularProgress size={20} /> : 
-               (dialogMode === 'add' ? 'Əlavə et' : 'Yenilə')}
+               dialogMode === 'add' ? 'Əlavə Et' : 'Yadda Saxla'}
             </Button>
           )}
         </DialogActions>
@@ -494,16 +443,17 @@ const AcademicYearsPage = () => {
         <DialogTitle>Akademik İli Sil</DialogTitle>
         <DialogContent>
           <Typography>
-            "{selectedYear?.name}" adlı akademik ili silmək istədiyinizdən əminsiniz?
-            Bu əməliyyat geri qaytarıla bilməz və bağlı bütün məlumatlar silinəcək.
+            {selectedYear?.name} adlı akademik ili silmək istədiyinizə əminsiniz?
+            Bu əməliyyat geri qaytarıla bilməz.
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteConfirmOpen(false)}>Ləğv et</Button>
+          <Button onClick={() => setDeleteConfirmOpen(false)}>
+            İmtina
+          </Button>
           <Button
-            onClick={handleDelete} 
-            color="error" 
-            variant="contained"
+            onClick={handleDelete}
+            color="error"
             disabled={submitting}
           >
             {submitting ? <CircularProgress size={20} /> : 'Sil'}

@@ -44,8 +44,7 @@ import {
   CheckCircle as ActiveIcon,
   Cancel as InactiveIcon,
 } from '@mui/icons-material';
-
-const API_BASE_URL = 'http://127.0.0.1:8000';
+import { adminAPI } from '../../services/api';
 
 const ProgramsPage = () => {
   const [programs, setPrograms] = useState([]);
@@ -76,24 +75,12 @@ const ProgramsPage = () => {
   const fetchPrograms = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('adminToken');
-      const response = await fetch(`${API_BASE_URL}/programs`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setPrograms(data.programs || []);
-        setError('');
-      } else {
-        setError('Proqramlar yüklənərkən xəta baş verdi');
-      }
+      const response = await adminAPI.getPrograms();
+      setPrograms(response.data.programs || []);
+      setError('');
     } catch (error) {
       console.error('Error fetching programs:', error);
-      setError('Proqramlar yüklənərkən xəta baş verdi');
+      setError('Proqramlar yüklənərkən xəta baş verdi: ' + (error.response?.data?.message || error.message));
       setPrograms([]);
     } finally {
       setLoading(false);
@@ -143,36 +130,11 @@ const ProgramsPage = () => {
 
     try {
       setSubmitting(true);
-      const token = localStorage.getItem('adminToken');
       
       if (dialogMode === 'add') {
-        const response = await fetch(`${API_BASE_URL}/programs`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(formData)
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Proqram yaradılarkən xəta baş verdi');
-        }
+        await adminAPI.createProgram(formData);
       } else if (dialogMode === 'edit' && selectedProgram) {
-        const response = await fetch(`${API_BASE_URL}/programs/${selectedProgram._id}`, {
-          method: 'PATCH',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(formData)
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Proqram yenilənərkən xəta baş verdi');
-        }
+        await adminAPI.updateProgram(selectedProgram._id, formData);
       }
       
       await fetchPrograms();
@@ -180,7 +142,7 @@ const ProgramsPage = () => {
       setError('');
     } catch (error) {
       console.error('Error saving program:', error);
-      setError(error.message || 'Proqram saxlanılarkən xəta baş verdi');
+      setError(error.response?.data?.message || 'Proqram saxlanılarkən xəta baş verdi');
     } finally {
       setSubmitting(false);
     }
@@ -191,19 +153,7 @@ const ProgramsPage = () => {
 
     try {
       setSubmitting(true);
-      const token = localStorage.getItem('adminToken');
-      const response = await fetch(`${API_BASE_URL}/programs/${selectedProgram._id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Proqram silinərkən xəta baş verdi');
-      }
+      await adminAPI.deleteProgram(selectedProgram._id);
       
       await fetchPrograms();
       setDeleteConfirmOpen(false);
@@ -211,7 +161,7 @@ const ProgramsPage = () => {
       setError('');
     } catch (error) {
       console.error('Error deleting program:', error);
-      setError('Proqram silinərkən xəta baş verdi');
+      setError(error.response?.data?.message || 'Proqram silinərkən xəta baş verdi');
     } finally {
       setSubmitting(false);
     }

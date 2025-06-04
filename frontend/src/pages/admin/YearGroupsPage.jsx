@@ -45,8 +45,7 @@ import {
   CalendarMonth as CalendarIcon,
   Class as ClassIcon,
 } from '@mui/icons-material';
-
-const API_BASE_URL = 'http://127.0.0.1:8000';
+import { adminAPI } from '../../services/api';
 
 const YearGroupsPage = () => {
   const [yearGroups, setYearGroups] = useState([]);
@@ -80,24 +79,12 @@ const YearGroupsPage = () => {
   const loadYearGroups = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('adminToken');
-      const response = await fetch(`${API_BASE_URL}/year-groups`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setYearGroups(data.yearGroups || []);
-        setError('');
-      } else {
-        setError('İl qrupları yüklənərkən xəta baş verdi');
-      }
+      const response = await adminAPI.getYearGroups();
+      setYearGroups(response.data.yearGroups || []);
+      setError('');
     } catch (error) {
       console.error('Error loading year groups:', error);
-      setError('İl qrupları yüklənərkən xəta baş verdi');
+      setError('İl qrupları yüklənərkən xəta baş verdi: ' + (error.response?.data?.message || error.message));
       setYearGroups([]);
     } finally {
       setLoading(false);
@@ -106,18 +93,8 @@ const YearGroupsPage = () => {
 
   const loadAcademicYears = async () => {
     try {
-      const token = localStorage.getItem('adminToken');
-      const response = await fetch(`${API_BASE_URL}/academic-years`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setAcademicYears(data.academicYears || []);
-      }
+      const response = await adminAPI.getAcademicYears();
+      setAcademicYears(response.data.academicYears || []);
     } catch (error) {
       console.error('Error loading academic years:', error);
     }
@@ -170,36 +147,11 @@ const YearGroupsPage = () => {
 
     try {
       setSubmitting(true);
-      const token = localStorage.getItem('adminToken');
       
       if (dialogMode === 'add') {
-        const response = await fetch(`${API_BASE_URL}/year-groups`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(formData)
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'İl qrupu yaradılarkən xəta baş verdi');
-        }
+        await adminAPI.createYearGroup(formData);
       } else if (dialogMode === 'edit' && selectedGroup) {
-        const response = await fetch(`${API_BASE_URL}/year-groups/${selectedGroup._id}`, {
-          method: 'PATCH',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(formData)
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'İl qrupu yenilənərkən xəta baş verdi');
-        }
+        await adminAPI.updateYearGroup(selectedGroup._id, formData);
       }
       
       await loadYearGroups();
@@ -207,7 +159,7 @@ const YearGroupsPage = () => {
       setError('');
     } catch (error) {
       console.error('Error saving year group:', error);
-      setError(error.message || 'İl qrupu saxlanılarkən xəta baş verdi');
+      setError(error.response?.data?.message || 'İl qrupu saxlanılarkən xəta baş verdi');
     } finally {
       setSubmitting(false);
     }
@@ -218,19 +170,7 @@ const YearGroupsPage = () => {
 
     try {
       setSubmitting(true);
-      const token = localStorage.getItem('adminToken');
-      const response = await fetch(`${API_BASE_URL}/year-groups/${selectedGroup._id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'İl qrupu silinərkən xəta baş verdi');
-      }
+      await adminAPI.deleteYearGroup(selectedGroup._id);
       
       await loadYearGroups();
       setDeleteConfirmOpen(false);
@@ -238,7 +178,7 @@ const YearGroupsPage = () => {
       setError('');
     } catch (error) {
       console.error('Error deleting year group:', error);
-      setError('İl qrupu silinərkən xəta baş verdi');
+      setError(error.response?.data?.message || 'İl qrupu silinərkən xəta baş verdi');
     } finally {
       setSubmitting(false);
     }

@@ -49,7 +49,7 @@ import {
   Close as CloseIcon
 } from '@mui/icons-material';
 
-import { teacherAPI, generalAPI } from '../../services/api';
+import { teacherAPI, generalAPI, adminAPI } from '../../services/api';
 
 const ExamsPage = () => {
   const [exams, setExams] = useState([]);
@@ -68,7 +68,10 @@ const ExamsPage = () => {
     duration: '',
     examDate: '',
     examTime: '',
-    examType: 'quiz'
+    examType: 'quiz',
+    passMark: '',
+    totalMark: '',
+    examStatus: 'pending'
   });
   const [validationErrors, setValidationErrors] = useState({});
   const [loadingOptions, setLoadingOptions] = useState(false);
@@ -110,18 +113,18 @@ const ExamsPage = () => {
       
       const [termsResponse, yearsResponse, levelsResponse, subjectsResponse, programsResponse] = await Promise.all([
         generalAPI.getAcademicTerms(),
-        fetch('/api/v1/academic-years').then(res => res.json()).catch(() => ({ data: [] })),
-        fetch('/api/v1/class-levels').then(res => res.json()).catch(() => ({ data: [] })),
+        adminAPI.getAcademicYears(),
+        adminAPI.getClassLevels(),
         teacherAPI.getSubjects(),
-        fetch('/api/v1/programs').then(res => res.json()).catch(() => ({ data: [] }))
+        adminAPI.getPrograms()
       ]);
 
       setOptions({
-        academicTerms: termsResponse.data || [],
-        academicYears: yearsResponse.data || [],
-        classLevels: levelsResponse.data || [],
+        academicTerms: termsResponse.data?.academicTerms || termsResponse.data || [],
+        academicYears: yearsResponse.data?.academicYears || yearsResponse.data || [],
+        classLevels: levelsResponse.data?.classes || levelsResponse.data || [],
         subjects: subjectsResponse.data?.subjects || subjectsResponse.data?.data || [],
-        programs: programsResponse.data || []
+        programs: programsResponse.data?.programs || programsResponse.data || []
       });
       
     } catch (err) {
@@ -145,7 +148,10 @@ const ExamsPage = () => {
         duration: exam.duration || '',
         examDate: exam.examDate || '',
         examTime: exam.examTime || '',
-        examType: exam.examType || 'quiz'
+        examType: exam.examType || 'quiz',
+        passMark: exam.passMark || '',
+        totalMark: exam.totalMark || '',
+        examStatus: exam.examStatus || 'pending'
       });
     } else {
       setEditingExam(null);
@@ -160,7 +166,10 @@ const ExamsPage = () => {
         duration: '',
         examDate: '',
         examTime: '',
-        examType: 'quiz'
+        examType: 'quiz',
+        passMark: '',
+        totalMark: '',
+        examStatus: 'pending'
       });
     }
     setValidationErrors({});
@@ -195,6 +204,25 @@ const ExamsPage = () => {
     if (!formData.duration.trim()) errors.duration = 'Müddət tələb olunur';
     if (!formData.examDate.trim()) errors.examDate = 'İmtahan tarixi tələb olunur';
     if (!formData.examTime.trim()) errors.examTime = 'İmtahan vaxtı tələb olunur';
+    if (!formData.passMark.trim()) errors.passMark = 'Keçid balı tələb olunur';
+    if (!formData.totalMark.trim()) errors.totalMark = 'Ümumi bal tələb olunur';
+    if (!formData.examStatus.trim()) errors.examStatus = 'İmtahan statusu tələb olunur';
+    
+    // Check if passMark is a valid number
+    if (formData.passMark && isNaN(formData.passMark)) {
+      errors.passMark = 'Keçid balı rəqəm olmalıdır';
+    }
+    
+    // Check if totalMark is a valid number
+    if (formData.totalMark && isNaN(formData.totalMark)) {
+      errors.totalMark = 'Ümumi bal rəqəm olmalıdır';
+    }
+    
+    // Check if passMark is not greater than totalMark
+    if (formData.passMark && formData.totalMark && 
+        Number(formData.passMark) > Number(formData.totalMark)) {
+      errors.passMark = 'Keçid balı ümumi baldan böyük ola bilməz';
+    }
     
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
@@ -289,6 +317,8 @@ const ExamsPage = () => {
                   <TableCell>Tarix</TableCell>
                   <TableCell>Vaxt</TableCell>
                   <TableCell>Müddət</TableCell>
+                  <TableCell>Ballar</TableCell>
+                  <TableCell>Status</TableCell>
                   <TableCell>Fənn</TableCell>
                   <TableCell>Əməliyyatlar</TableCell>
                 </TableRow>
@@ -314,6 +344,18 @@ const ExamsPage = () => {
                     <TableCell>{formatDate(exam.examDate)}</TableCell>
                     <TableCell>{exam.examTime}</TableCell>
                     <TableCell>{exam.duration}</TableCell>
+                    <TableCell>
+                      <Typography variant="body2">
+                        {exam.passMark || 'N/A'} / {exam.totalMark || 'N/A'}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Chip 
+                        label={exam.examStatus === 'pending' ? 'Gözləyən' : 'Canlı'} 
+                        color={exam.examStatus === 'live' ? 'success' : 'warning'}
+                        size="small"
+                      />
+                    </TableCell>
                     <TableCell>{exam.subject?.name || 'N/A'}</TableCell>
                     <TableCell>
                       <IconButton
@@ -333,7 +375,7 @@ const ExamsPage = () => {
                 ))}
                 {exams.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={7} align="center">
+                    <TableCell colSpan={9} align="center">
                       <Typography color="text.secondary">
                         Hələ imtahan yoxdur
                       </Typography>
@@ -346,17 +388,30 @@ const ExamsPage = () => {
         </Paper>
 
         {/* Dialog for Create/Edit Exam */}
-        <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
+        <Dialog 
+          open={openDialog} 
+          onClose={handleCloseDialog} 
+          maxWidth="lg" 
+          fullWidth
+          PaperProps={{
+            sx: {
+              minHeight: '600px',
+              maxHeight: '90vh'
+            }
+          }}
+        >
           <DialogTitle>
             <Box display="flex" justifyContent="space-between" alignItems="center">
-              {editingExam ? 'İmtahan Redaktə et' : 'Yeni İmtahan Yarat'}
+              <Typography variant="h6" component="h2">
+                {editingExam ? 'İmtahan Redaktə et' : 'Yeni İmtahan Yarat'}
+              </Typography>
               <IconButton onClick={handleCloseDialog}>
                 <CloseIcon />
               </IconButton>
             </Box>
           </DialogTitle>
-          <DialogContent>
-            <Grid container spacing={2}>
+          <DialogContent sx={{ paddingTop: '20px !important' }}>
+            <Grid container spacing={3}>
               <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
@@ -366,14 +421,52 @@ const ExamsPage = () => {
                   error={!!validationErrors.name}
                   helperText={validationErrors.name}
                   margin="normal"
+                  sx={{ fontSize: '16px' }}
                 />
               </Grid>
               <Grid item xs={12} md={6}>
                 <FormControl fullWidth margin="normal" error={!!validationErrors.examType}>
-                  <InputLabel>İmtahan Növü</InputLabel>
+                  <InputLabel sx={{ fontSize: '16px', color: '#1976d2' }}>İmtahan Növü</InputLabel>
                   <Select
                     value={formData.examType}
                     onChange={(e) => handleInputChange('examType', e.target.value)}
+                    sx={{ 
+                      fontSize: '16px',
+                      minHeight: '56px',
+                      '& .MuiSelect-select': {
+                        fontSize: '16px',
+                        padding: '16.5px 14px',
+                        color: '#000',
+                        fontWeight: '500'
+                      },
+                      '& .MuiOutlinedInput-root': {
+                        fontSize: '16px'
+                      }
+                    }}
+                    MenuProps={{
+                      PaperProps: {
+                        sx: {
+                          maxHeight: '300px',
+                          '& .MuiMenuItem-root': {
+                            fontSize: '16px',
+                            padding: '14px 16px',
+                            minHeight: '48px',
+                            color: '#000',
+                            fontWeight: '500',
+                            '&:hover': {
+                              backgroundColor: '#f5f5f5'
+                            },
+                            '&.Mui-selected': {
+                              backgroundColor: '#e3f2fd',
+                              color: '#1976d2',
+                              '&:hover': {
+                                backgroundColor: '#bbdefb'
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }}
                   >
                     <MenuItem value="quiz">Quiz</MenuItem>
                     <MenuItem value="midterm">Orta imtahan</MenuItem>
@@ -395,14 +488,52 @@ const ExamsPage = () => {
                   error={!!validationErrors.description}
                   helperText={validationErrors.description}
                   margin="normal"
+                  sx={{ fontSize: '16px' }}
                 />
               </Grid>
               <Grid item xs={12} md={6}>
                 <FormControl fullWidth margin="normal" error={!!validationErrors.academicTerm}>
-                  <InputLabel>Tədris Mövsümü</InputLabel>
+                  <InputLabel sx={{ fontSize: '16px', color: '#1976d2' }}>Tədris Mövsümü</InputLabel>
                   <Select
                     value={formData.academicTerm}
                     onChange={(e) => handleInputChange('academicTerm', e.target.value)}
+                    sx={{ 
+                      fontSize: '16px',
+                      minHeight: '56px',
+                      '& .MuiSelect-select': {
+                        fontSize: '16px',
+                        padding: '16.5px 14px',
+                        color: '#000',
+                        fontWeight: '500'
+                      },
+                      '& .MuiOutlinedInput-root': {
+                        fontSize: '16px'
+                      }
+                    }}
+                    MenuProps={{
+                      PaperProps: {
+                        sx: {
+                          maxHeight: '300px',
+                          '& .MuiMenuItem-root': {
+                            fontSize: '16px',
+                            padding: '14px 16px',
+                            minHeight: '48px',
+                            color: '#000',
+                            fontWeight: '500',
+                            '&:hover': {
+                              backgroundColor: '#f5f5f5'
+                            },
+                            '&.Mui-selected': {
+                              backgroundColor: '#e3f2fd',
+                              color: '#1976d2',
+                              '&:hover': {
+                                backgroundColor: '#bbdefb'
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }}
                   >
                     {options.academicTerms.map((term) => (
                       <MenuItem key={term._id} value={term._id}>
@@ -417,10 +548,47 @@ const ExamsPage = () => {
               </Grid>
               <Grid item xs={12} md={6}>
                 <FormControl fullWidth margin="normal" error={!!validationErrors.academicYear}>
-                  <InputLabel>Tədris İli</InputLabel>
+                  <InputLabel sx={{ fontSize: '16px', color: '#1976d2' }}>Tədris İli</InputLabel>
                   <Select
                     value={formData.academicYear}
                     onChange={(e) => handleInputChange('academicYear', e.target.value)}
+                    sx={{ 
+                      fontSize: '16px',
+                      minHeight: '56px',
+                      '& .MuiSelect-select': {
+                        fontSize: '16px',
+                        padding: '16.5px 14px',
+                        color: '#000',
+                        fontWeight: '500'
+                      },
+                      '& .MuiOutlinedInput-root': {
+                        fontSize: '16px'
+                      }
+                    }}
+                    MenuProps={{
+                      PaperProps: {
+                        sx: {
+                          maxHeight: '300px',
+                          '& .MuiMenuItem-root': {
+                            fontSize: '16px',
+                            padding: '14px 16px',
+                            minHeight: '48px',
+                            color: '#000',
+                            fontWeight: '500',
+                            '&:hover': {
+                              backgroundColor: '#f5f5f5'
+                            },
+                            '&.Mui-selected': {
+                              backgroundColor: '#e3f2fd',
+                              color: '#1976d2',
+                              '&:hover': {
+                                backgroundColor: '#bbdefb'
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }}
                   >
                     {options.academicYears.map((year) => (
                       <MenuItem key={year._id} value={year._id}>
@@ -435,10 +603,47 @@ const ExamsPage = () => {
               </Grid>
               <Grid item xs={12} md={6}>
                 <FormControl fullWidth margin="normal" error={!!validationErrors.classLevel}>
-                  <InputLabel>Sinif Səviyyəsi</InputLabel>
+                  <InputLabel sx={{ fontSize: '16px', color: '#1976d2' }}>Sinif Səviyyəsi</InputLabel>
                   <Select
                     value={formData.classLevel}
                     onChange={(e) => handleInputChange('classLevel', e.target.value)}
+                    sx={{ 
+                      fontSize: '16px',
+                      minHeight: '56px',
+                      '& .MuiSelect-select': {
+                        fontSize: '16px',
+                        padding: '16.5px 14px',
+                        color: '#000',
+                        fontWeight: '500'
+                      },
+                      '& .MuiOutlinedInput-root': {
+                        fontSize: '16px'
+                      }
+                    }}
+                    MenuProps={{
+                      PaperProps: {
+                        sx: {
+                          maxHeight: '300px',
+                          '& .MuiMenuItem-root': {
+                            fontSize: '16px',
+                            padding: '14px 16px',
+                            minHeight: '48px',
+                            color: '#000',
+                            fontWeight: '500',
+                            '&:hover': {
+                              backgroundColor: '#f5f5f5'
+                            },
+                            '&.Mui-selected': {
+                              backgroundColor: '#e3f2fd',
+                              color: '#1976d2',
+                              '&:hover': {
+                                backgroundColor: '#bbdefb'
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }}
                   >
                     {options.classLevels.map((level) => (
                       <MenuItem key={level._id} value={level._id}>
@@ -453,10 +658,47 @@ const ExamsPage = () => {
               </Grid>
               <Grid item xs={12} md={6}>
                 <FormControl fullWidth margin="normal" error={!!validationErrors.subject}>
-                  <InputLabel>Fənn</InputLabel>
+                  <InputLabel sx={{ fontSize: '16px', color: '#1976d2' }}>Fənn</InputLabel>
                   <Select
                     value={formData.subject}
                     onChange={(e) => handleInputChange('subject', e.target.value)}
+                    sx={{ 
+                      fontSize: '16px',
+                      minHeight: '56px',
+                      '& .MuiSelect-select': {
+                        fontSize: '16px',
+                        padding: '16.5px 14px',
+                        color: '#000',
+                        fontWeight: '500'
+                      },
+                      '& .MuiOutlinedInput-root': {
+                        fontSize: '16px'
+                      }
+                    }}
+                    MenuProps={{
+                      PaperProps: {
+                        sx: {
+                          maxHeight: '300px',
+                          '& .MuiMenuItem-root': {
+                            fontSize: '16px',
+                            padding: '14px 16px',
+                            minHeight: '48px',
+                            color: '#000',
+                            fontWeight: '500',
+                            '&:hover': {
+                              backgroundColor: '#f5f5f5'
+                            },
+                            '&.Mui-selected': {
+                              backgroundColor: '#e3f2fd',
+                              color: '#1976d2',
+                              '&:hover': {
+                                backgroundColor: '#bbdefb'
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }}
                   >
                     {options.subjects.map((subject) => (
                       <MenuItem key={subject._id} value={subject._id}>
@@ -471,10 +713,47 @@ const ExamsPage = () => {
               </Grid>
               <Grid item xs={12} md={6}>
                 <FormControl fullWidth margin="normal" error={!!validationErrors.program}>
-                  <InputLabel>Proqram</InputLabel>
+                  <InputLabel sx={{ fontSize: '16px', color: '#1976d2' }}>Proqram</InputLabel>
                   <Select
                     value={formData.program}
                     onChange={(e) => handleInputChange('program', e.target.value)}
+                    sx={{ 
+                      fontSize: '16px',
+                      minHeight: '56px',
+                      '& .MuiSelect-select': {
+                        fontSize: '16px',
+                        padding: '16.5px 14px',
+                        color: '#000',
+                        fontWeight: '500'
+                      },
+                      '& .MuiOutlinedInput-root': {
+                        fontSize: '16px'
+                      }
+                    }}
+                    MenuProps={{
+                      PaperProps: {
+                        sx: {
+                          maxHeight: '300px',
+                          '& .MuiMenuItem-root': {
+                            fontSize: '16px',
+                            padding: '14px 16px',
+                            minHeight: '48px',
+                            color: '#000',
+                            fontWeight: '500',
+                            '&:hover': {
+                              backgroundColor: '#f5f5f5'
+                            },
+                            '&.Mui-selected': {
+                              backgroundColor: '#e3f2fd',
+                              color: '#1976d2',
+                              '&:hover': {
+                                backgroundColor: '#bbdefb'
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }}
                   >
                     {options.programs.map((program) => (
                       <MenuItem key={program._id} value={program._id}>
@@ -496,6 +775,7 @@ const ExamsPage = () => {
                   error={!!validationErrors.duration}
                   helperText={validationErrors.duration || 'Məsələn: 60 dəqiqə'}
                   margin="normal"
+                  sx={{ fontSize: '16px' }}
                 />
               </Grid>
               <Grid item xs={12} md={6}>
@@ -511,6 +791,7 @@ const ExamsPage = () => {
                   InputLabelProps={{
                     shrink: true,
                   }}
+                  sx={{ fontSize: '16px' }}
                 />
               </Grid>
               <Grid item xs={12} md={6}>
@@ -522,7 +803,86 @@ const ExamsPage = () => {
                   error={!!validationErrors.examTime}
                   helperText={validationErrors.examTime || 'Məsələn: 09:00'}
                   margin="normal"
+                  sx={{ fontSize: '16px' }}
                 />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Keçid Balı"
+                  type="number"
+                  value={formData.passMark}
+                  onChange={(e) => handleInputChange('passMark', e.target.value)}
+                  error={!!validationErrors.passMark}
+                  helperText={validationErrors.passMark || 'Məsələn: 50'}
+                  margin="normal"
+                  sx={{ fontSize: '16px' }}
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Ümumi Bal"
+                  type="number"
+                  value={formData.totalMark}
+                  onChange={(e) => handleInputChange('totalMark', e.target.value)}
+                  error={!!validationErrors.totalMark}
+                  helperText={validationErrors.totalMark || 'Məsələn: 100'}
+                  margin="normal"
+                  sx={{ fontSize: '16px' }}
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth margin="normal" error={!!validationErrors.examStatus}>
+                  <InputLabel sx={{ fontSize: '16px', color: '#1976d2' }}>İmtahan Statusu</InputLabel>
+                  <Select
+                    value={formData.examStatus}
+                    onChange={(e) => handleInputChange('examStatus', e.target.value)}
+                    sx={{ 
+                      fontSize: '16px',
+                      minHeight: '56px',
+                      '& .MuiSelect-select': {
+                        fontSize: '16px',
+                        padding: '16.5px 14px',
+                        color: '#000',
+                        fontWeight: '500'
+                      },
+                      '& .MuiOutlinedInput-root': {
+                        fontSize: '16px'
+                      }
+                    }}
+                    MenuProps={{
+                      PaperProps: {
+                        sx: {
+                          maxHeight: '300px',
+                          '& .MuiMenuItem-root': {
+                            fontSize: '16px',
+                            padding: '14px 16px',
+                            minHeight: '48px',
+                            color: '#000',
+                            fontWeight: '500',
+                            '&:hover': {
+                              backgroundColor: '#f5f5f5'
+                            },
+                            '&.Mui-selected': {
+                              backgroundColor: '#e3f2fd',
+                              color: '#1976d2',
+                              '&:hover': {
+                                backgroundColor: '#bbdefb'
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }}
+                  >
+                    <MenuItem value="pending">Gözləyən</MenuItem>
+                    <MenuItem value="live">Canlı</MenuItem>
+                  </Select>
+                  {validationErrors.examStatus && (
+                    <FormHelperText>{validationErrors.examStatus}</FormHelperText>
+                  )}
+                </FormControl>
               </Grid>
             </Grid>
           </DialogContent>

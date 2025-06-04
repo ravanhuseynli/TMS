@@ -44,8 +44,7 @@ import {
   CheckCircle as ActiveIcon,
   Cancel as InactiveIcon,
 } from '@mui/icons-material';
-
-const API_BASE_URL = 'http://127.0.0.1:8000';
+import { adminAPI } from '../../services/api';
 
 const SubjectsPage = () => {
   const [subjects, setSubjects] = useState([]);
@@ -79,24 +78,12 @@ const SubjectsPage = () => {
   const fetchSubjects = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('adminToken');
-      const response = await fetch(`${API_BASE_URL}/subjects`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setSubjects(data.subjects || []);
-        setError('');
-      } else {
-        setError('Fənlər yüklənərkən xəta baş verdi');
-      }
+      const response = await adminAPI.getSubjects();
+      setSubjects(response.data.subjects || []);
+      setError('');
     } catch (error) {
       console.error('Error fetching subjects:', error);
-      setError('Fənlər yüklənərkən xəta baş verdi');
+      setError('Fənlər yüklənərkən xəta baş verdi: ' + (error.response?.data?.message || error.message));
       setSubjects([]);
     } finally {
       setLoading(false);
@@ -105,18 +92,8 @@ const SubjectsPage = () => {
 
   const fetchAcademicTerms = async () => {
     try {
-      const token = localStorage.getItem('adminToken');
-      const response = await fetch(`${API_BASE_URL}/academic-terms`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setAcademicTerms(data.academicTerms || []);
-      }
+      const response = await adminAPI.getAcademicTerms();
+      setAcademicTerms(response.data.academicTerms || []);
     } catch (error) {
       console.error('Error fetching academic terms:', error);
     }
@@ -169,36 +146,11 @@ const SubjectsPage = () => {
 
     try {
       setSubmitting(true);
-      const token = localStorage.getItem('adminToken');
       
       if (dialogMode === 'add') {
-        const response = await fetch(`${API_BASE_URL}/subjects`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(formData)
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Fənn yaradılarkən xəta baş verdi');
-        }
+        await adminAPI.createSubject(formData);
       } else if (dialogMode === 'edit' && selectedSubject) {
-        const response = await fetch(`${API_BASE_URL}/subjects/${selectedSubject._id}`, {
-          method: 'PATCH',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(formData)
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Fənn yenilənərkən xəta baş verdi');
-        }
+        await adminAPI.updateSubject(selectedSubject._id, formData);
       }
       
       await fetchSubjects();
@@ -206,7 +158,7 @@ const SubjectsPage = () => {
       setError('');
     } catch (error) {
       console.error('Error saving subject:', error);
-      setError(error.message || 'Fənn saxlanılarkən xəta baş verdi');
+      setError(error.response?.data?.message || 'Fənn saxlanılarkən xəta baş verdi');
     } finally {
       setSubmitting(false);
     }
@@ -217,19 +169,7 @@ const SubjectsPage = () => {
 
     try {
       setSubmitting(true);
-      const token = localStorage.getItem('adminToken');
-      const response = await fetch(`${API_BASE_URL}/subjects/${selectedSubject._id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Fənn silinərkən xəta baş verdi');
-      }
+      await adminAPI.deleteSubject(selectedSubject._id);
       
       await fetchSubjects();
       setDeleteConfirmOpen(false);
@@ -237,7 +177,7 @@ const SubjectsPage = () => {
       setError('');
     } catch (error) {
       console.error('Error deleting subject:', error);
-      setError('Fənn silinərkən xəta baş verdi');
+      setError(error.response?.data?.message || 'Fənn silinərkən xəta baş verdi');
     } finally {
       setSubmitting(false);
     }

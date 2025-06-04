@@ -40,24 +40,23 @@ const LoginPage = () => {
   const userTypes = [
     {
       value: 'admin',
-      label: 'İdarəçi',
+      label: 'Admin',
       icon: <AdminPanelSettings />,
       color: 'error',
-      description: 'Sistem idarəetməsi'
+      
     },
     {
       value: 'teacher',
       label: 'Müəllim',
       icon: <School />,
       color: 'primary',
-      description: 'İmtahan və sual idarəsi'
     },
     {
       value: 'student',
-      label: 'Şagird',
+      label: 'Tələbə',
       icon: <Person />,
       color: 'success',
-      description: 'İmtahan verə bilər'
+    
     }
   ];
 
@@ -286,7 +285,7 @@ const LoginPage = () => {
         {/* Footer */}
         <Box textAlign="center" mt={3}>
           <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)' }}>
-            © 2024 Məktəb İdarəetmə Sistemi. Bütün hüquqlar qorunur.
+            Məktəb İdarəetmə Sistemi.
           </Typography>
         </Box>
       </Container>

@@ -1,48 +1,52 @@
 import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Box,
-  Container,
-  Typography,
   Grid,
   Card,
   CardContent,
-  CardActions,
-  Button,
+  Typography,
   Avatar,
-  Divider,
   List,
   ListItem,
   ListItemText,
   ListItemAvatar,
-  Paper,
-  Chip,
+  IconButton,
+  LinearProgress,
   Alert,
-  CircularProgress
+  Button,
+  Divider,
+  CardActions,
 } from '@mui/material';
 import {
   Add as AddIcon,
   Quiz as QuizIcon,
   HelpOutline as QuestionIcon,
-  Subject as SubjectIcon,
   AccountCircle as AccountCircleIcon,
   TrendingUp as TrendingUpIcon,
   Assignment as AssignmentIcon,
-  Visibility as VisibilityIcon
+  Visibility as VisibilityIcon,
+  ArrowForward,
+  Analytics,
+  School,
+  People,
+  Book,
+  Event,
+  PersonAdd,
 } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 import { teacherAPI } from '../../services/api';
 
 const TeacherDashboard = () => {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [statistics, setStatistics] = useState({
+  const { user } = useAuth();
+  const [stats, setStats] = useState({
     totalExams: 0,
     totalQuestions: 0,
-    totalSubjects: 0,
     recentExams: [],
     recentQuestions: [],
-    recentSubjects: []
+    loading: true,
+    error: null
   });
   const [teacherProfile, setTeacherProfile] = useState(null);
 
@@ -52,37 +56,48 @@ const TeacherDashboard = () => {
 
   const loadDashboardData = async () => {
     try {
-      setLoading(true);
-      setError(null);
+      setStats(prev => ({ ...prev, loading: true, error: null }));
+      
+      console.log('Loading dashboard statistics...');
 
       // Load teacher profile and statistics in parallel
-      const [profileResponse, examsResponse, questionsResponse, subjectsResponse] = await Promise.all([
+      const [profileResponse, examsResponse, questionsResponse] = await Promise.allSettled([
         teacherAPI.getProfile(),
         teacherAPI.getExams(),
-        teacherAPI.getQuestions(),
-        teacherAPI.getSubjects()
+        teacherAPI.getQuestions()
       ]);
 
-      setTeacherProfile(profileResponse.data?.teacher || profileResponse.data?.data);
-
-      const exams = examsResponse.data?.exams || examsResponse.data?.data || [];
-      const questions = questionsResponse.data?.questions || questionsResponse.data?.data || [];
-      const subjects = subjectsResponse.data?.subjects || subjectsResponse.data?.data || [];
-
-      setStatistics({
-        totalExams: exams.length,
-        totalQuestions: questions.length,
-        totalSubjects: subjects.length,
-        recentExams: exams.slice(0, 5),
-        recentQuestions: questions.slice(0, 5),
-        recentSubjects: subjects.slice(0, 5)
+      console.log('API responses:', {
+        profile: profileResponse,
+        exams: examsResponse,
+        questions: questionsResponse
       });
 
+      setTeacherProfile(profileResponse.status === 'fulfilled' ? 
+        (profileResponse.value?.data?.teacher || profileResponse.value?.data?.data) : null);
+
+      const exams = examsResponse.status === 'fulfilled' ? 
+        (examsResponse.value?.data?.exams || examsResponse.value?.data?.data || []) : [];
+      const questions = questionsResponse.status === 'fulfilled' ? 
+        (questionsResponse.value?.data?.questions || questionsResponse.value?.data?.data || []) : [];
+
+      setStats({
+        totalExams: exams.length,
+        totalQuestions: questions.length,
+        recentExams: exams.slice(0, 5),
+        recentQuestions: questions.slice(0, 5),
+        loading: false,
+        error: null
+      });
+
+      console.log('Teacher dashboard stats updated successfully');
     } catch (err) {
       console.error('Error loading dashboard data:', err);
-      setError(err.response?.data?.message || 'Məlumatlar yüklənərkən xəta baş verdi');
-    } finally {
-      setLoading(false);
+      setStats(prev => ({ 
+        ...prev, 
+        loading: false, 
+        error: err.response?.data?.message || 'Məlumatlar yüklənərkən xəta baş verdi' 
+      }));
     }
   };
 
@@ -99,334 +114,269 @@ const TeacherDashboard = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-          <CircularProgress size={60} />
-        </Box>
-      </Container>
-    );
-  }
+  const statsCards = [
+    {
+      title: 'Yaratdığım İmtahanlar',
+      value: stats.totalExams,
+      icon: <AssignmentIcon />,
+      color: 'primary',
+      link: '/teacher/exams',
+      description: 'Hazırladığım imtahan sayı'
+    },
+    {
+      title: 'Yaratdığım Suallar',
+      value: stats.totalQuestions,
+      icon: <QuestionIcon />,
+      color: 'success',
+      link: '/teacher/questions',
+      description: 'Hazırladığım sual sayı'
+    },
+    {
+      title: 'Ümumi Aktivlər',
+      value: stats.totalExams + stats.totalQuestions,
+      icon: <TrendingUpIcon />,
+      color: 'info',
+      link: '/teacher/profile',
+      description: 'Toplam fəaliyyət sayı'
+    }
+  ];
 
-  if (error) {
+  const quickActions = [
+    {
+      title: 'Yeni İmtahan',
+      description: 'Tələbələr üçün yeni imtahan hazırla',
+      icon: <AddIcon />,
+      color: 'primary',
+      action: () => handleNavigation('/teacher/exams'),
+      variant: 'contained'
+    },
+    {
+      title: 'Yeni Sual',
+      description: 'İmtahan sualları yarat',
+      icon: <QuestionIcon />,
+      color: 'success',
+      action: () => handleNavigation('/teacher/questions'),
+      variant: 'outlined'
+    },
+    {
+      title: 'Profil',
+      description: 'Şəxsi məlumatlarını idarə et',
+      icon: <AccountCircleIcon />,
+      color: 'info',
+      action: () => handleNavigation('/teacher/profile'),
+      variant: 'outlined'
+    }
+  ];
+
+  const recentActivities = [
+    {
+      id: 1,
+      type: 'teacher_login',
+      message: `${user?.name || 'Müəllim'} sistemə daxil oldu`,
+      time: 'İndi',
+      icon: <AccountCircleIcon />,
+      color: 'primary'
+    },
+    {
+      id: 2,
+      type: 'stats_loaded',
+      message: 'Dashboard statistikaları yeniləndi',
+      time: '1 dəqiqə əvvəl',
+      icon: <Analytics />,
+      color: 'success'
+    },
+    {
+      id: 3,
+      type: 'system_info',
+      message: `${stats.totalExams} imtahan, ${stats.totalQuestions} sual hazırlanıb`,
+      time: '2 dəqiqə əvvəl',
+      icon: <TrendingUpIcon />,
+      color: 'info'
+    },
+    {
+      id: 4,
+      type: 'backend_connect',
+      message: 'Müəllim API ilə əlaqə quruldu',
+      time: '3 dəqiqə əvvəl',
+      icon: <PersonAdd />,
+      color: 'secondary'
+    },
+    {
+      id: 5,
+      type: 'data_sync',
+      message: 'İmtahan məlumatları sinxronlaşdırıldı',
+      time: '5 dəqiqə əvvəl',
+      icon: <AssignmentIcon />,
+      color: 'primary'
+    },
+    {
+      id: 6,
+      type: 'data_sync',
+      message: 'Sual məlumatları yeniləndi',
+      time: '7 dəqiqə əvvəl',
+      icon: <QuestionIcon />,
+      color: 'success'
+    }
+  ];
+
+  if (stats.loading) {
     return (
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-        <Button 
-          variant="contained" 
-          onClick={loadDashboardData}
-          startIcon={<TrendingUpIcon />}
-        >
-          Yenidən yüklə
-        </Button>
-      </Container>
+      <Box>
+        <Typography variant="h4" gutterBottom>
+          Müəllim Paneli
+        </Typography>
+        <LinearProgress sx={{ my: 2 }} />
+        <Typography color="text.secondary">
+          Müəllim məlumatları backend-dən yüklənir...
+        </Typography>
+      </Box>
     );
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      {/* Header */}
-      <Box sx={{ mb: 4 }}>
-        <Grid container spacing={3} alignItems="center">
-          <Grid item xs={12} md={8}>
-            <Typography variant="h4" component="h1" gutterBottom>
-              Müəllim Paneli
-            </Typography>
-            <Typography variant="h6" color="text.secondary">
-              Xoş gəlmisiniz, {teacherProfile?.name || 'Müəllim'}!
-            </Typography>
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <Box display="flex" justifyContent="flex-end">
-              <Avatar sx={{ width: 56, height: 56, bgcolor: 'primary.main' }}>
-                <AccountCircleIcon sx={{ fontSize: 32 }} />
-              </Avatar>
-            </Box>
-          </Grid>
-        </Grid>
+    <Box>
+      {/* Page Header */}
+      <Box mb={4}>
+        <Typography variant="h4" component="h1" fontWeight="bold" gutterBottom>
+          Müəllim Paneli
+        </Typography>
+        <Typography variant="body1" color="text.secondary">
+          Xoş gəlmisiniz, {teacherProfile?.name || user?.name || 'Müəllim'}!
+        </Typography>
+        
+        {stats.error && (
+          <Alert severity="warning" sx={{ mt: 2 }}>
+            {stats.error}
+          </Alert>
+        )}
       </Box>
 
       {/* Statistics Cards */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box display="flex" alignItems="center" justifyContent="space-between">
-                <Box>
-                  <Typography color="text.secondary" gutterBottom>
-                    Ümumi İmtahanlar
-                  </Typography>
-                  <Typography variant="h4" component="div">
-                    {statistics.totalExams}
-                  </Typography>
+      <Grid container spacing={3} mb={4}>
+        {statsCards.map((card, index) => (
+          <Grid item xs={12} sm={6} md={4} key={index}>
+            <Card 
+              component={Link}
+              to={card.link}
+              sx={{ 
+                textDecoration: 'none',
+                height: '100%',
+                position: 'relative',
+                overflow: 'visible',
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  transform: 'translateY(-4px)',
+                  boxShadow: 4,
+                }
+              }}
+            >
+              <CardContent>
+                <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
+                  <Avatar
+                    sx={{
+                      bgcolor: `${card.color}.main`,
+                      width: 56,
+                      height: 56,
+                    }}
+                  >
+                    {card.icon}
+                  </Avatar>
+                  <IconButton 
+                    size="small"
+                    sx={{ 
+                      bgcolor: `${card.color}.50`,
+                      '&:hover': { bgcolor: `${card.color}.100` }
+                    }}
+                  >
+                    <ArrowForward fontSize="small" />
+                  </IconButton>
                 </Box>
-                <Avatar sx={{ bgcolor: 'primary.main' }}>
-                  <AssignmentIcon />
-                </Avatar>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box display="flex" alignItems="center" justifyContent="space-between">
-                <Box>
-                  <Typography color="text.secondary" gutterBottom>
-                    Ümumi Suallar
-                  </Typography>
-                  <Typography variant="h4" component="div">
-                    {statistics.totalQuestions}
-                  </Typography>
-                </Box>
-                <Avatar sx={{ bgcolor: 'success.main' }}>
-                  <QuestionIcon />
-                </Avatar>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box display="flex" alignItems="center" justifyContent="space-between">
-                <Box>
-                  <Typography color="text.secondary" gutterBottom>
-                    Ümumi Fənlər
-                  </Typography>
-                  <Typography variant="h4" component="div">
-                    {statistics.totalSubjects}
-                  </Typography>
-                </Box>
-                <Avatar sx={{ bgcolor: 'warning.main' }}>
-                  <SubjectIcon />
-                </Avatar>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box display="flex" alignItems="center" justifyContent="space-between">
-                <Box>
-                  <Typography color="text.secondary" gutterBottom>
-                    Aktivlər
-                  </Typography>
-                  <Typography variant="h4" component="div">
-                    {statistics.totalExams + statistics.totalQuestions + statistics.totalSubjects}
-                  </Typography>
-                </Box>
-                <Avatar sx={{ bgcolor: 'info.main' }}>
-                  <TrendingUpIcon />
-                </Avatar>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
+                
+                <Typography variant="h4" component="div" fontWeight="bold" mb={1}>
+                  {card.value}
+                </Typography>
+                
+                <Typography variant="h6" color="text.primary" gutterBottom>
+                  {card.title}
+                </Typography>
+                
+                <Typography variant="body2" color="text.secondary">
+                  {card.description}
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        ))}
       </Grid>
 
       {/* Quick Actions */}
-      <Paper sx={{ p: 3, mb: 4 }}>
-        <Typography variant="h6" gutterBottom>
-          Tez Əməliyyatlar
-        </Typography>
-        <Grid container spacing={2}>
-          <Grid item>
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => handleNavigation('/teacher/exams')}
-              size="large"
-            >
-              Yeni İmtahan
-            </Button>
-          </Grid>
-          <Grid item>
-            <Button
-              variant="outlined"
-              startIcon={<QuestionIcon />}
-              onClick={() => handleNavigation('/teacher/questions')}
-              size="large"
-            >
-              Yeni Sual
-            </Button>
-          </Grid>
-          <Grid item>
-            <Button
-              variant="outlined"
-              startIcon={<SubjectIcon />}
-              onClick={() => handleNavigation('/teacher/subjects')}
-              size="large"
-            >
-              Yeni Fənn
-            </Button>
-          </Grid>
-          <Grid item>
-            <Button
-              variant="outlined"
-              startIcon={<AccountCircleIcon />}
-              onClick={() => handleNavigation('/teacher/profile')}
-              size="large"
-            >
-              Profil
-            </Button>
-          </Grid>
-        </Grid>
-      </Paper>
-
-      {/* Recent Activities */}
-      <Grid container spacing={3}>
-        {/* Recent Exams */}
-        <Grid item xs={12} md={4}>
+      <Grid container spacing={3} mb={4}>
+        <Grid item xs={12}>
           <Card>
             <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Son İmtahanlar
+              <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                ⚡ Tez Əməliyyatlar
               </Typography>
-              <Divider sx={{ mb: 2 }} />
-              {statistics.recentExams.length > 0 ? (
-                <List>
-                  {statistics.recentExams.map((exam, index) => (
-                    <ListItem key={index} sx={{ px: 0 }}>
-                      <ListItemAvatar>
-                        <Avatar sx={{ bgcolor: 'primary.main' }}>
-                          <AssignmentIcon />
-                        </Avatar>
-                      </ListItemAvatar>
-                      <ListItemText
-                        primary={exam.name}
-                        secondary={
+              <Typography variant="body2" color="text.secondary" mb={3}>
+                Tez-tez istifadə edilən funksiyalar
+              </Typography>
+              
+              <Grid container spacing={2}>
+                {quickActions.map((action, index) => (
+                  <Grid item xs={12} sm={6} md={4} key={index}>
+                    <Card 
+                      variant="outlined"
+                      sx={{
+                        height: '100%',
+                        transition: 'all 0.3s ease',
+                        '&:hover': {
+                          transform: 'translateY(-2px)',
+                          boxShadow: 2,
+                        },
+                      }}
+                    >
+                      <CardContent sx={{ p: 2 }}>
+                        <Box display="flex" alignItems="center" gap={2} mb={2}>
+                          <Avatar sx={{ 
+                            bgcolor: `${action.color}.main`,
+                            width: 40,
+                            height: 40
+                          }}>
+                            {action.icon}
+                          </Avatar>
                           <Box>
-                            <Typography variant="caption" display="block">
-                              {exam.examType} - {exam.duration}
+                            <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                              {action.title}
                             </Typography>
-                            <Typography variant="caption" display="block">
-                              {formatDate(exam.examDate)} - {exam.examTime}
+                            <Typography variant="caption" color="text.secondary">
+                              {action.description}
                             </Typography>
                           </Box>
-                        }
-                      />
-                    </ListItem>
-                  ))}
-                </List>
-              ) : (
-                <Typography color="text.secondary">
-                  Hələ imtahan yoxdur
-                </Typography>
-              )}
+                        </Box>
+                        
+                        <Button 
+                          variant={action.variant}
+                          color={action.color}
+                          onClick={action.action}
+                          size="small"
+                          fullWidth
+                          sx={{ mt: 1 }}
+                        >
+                          {action.title}
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
             </CardContent>
-            <CardActions>
-              <Button 
-                size="small" 
-                onClick={() => handleNavigation('/teacher/exams')}
-                endIcon={<VisibilityIcon />}
-              >
-                Hamısını Gör
-              </Button>
-            </CardActions>
-          </Card>
-        </Grid>
-
-        {/* Recent Questions */}
-        <Grid item xs={12} md={4}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Son Suallar
-              </Typography>
-              <Divider sx={{ mb: 2 }} />
-              {statistics.recentQuestions.length > 0 ? (
-                <List>
-                  {statistics.recentQuestions.map((question, index) => (
-                    <ListItem key={index} sx={{ px: 0 }}>
-                      <ListItemAvatar>
-                        <Avatar sx={{ bgcolor: 'success.main' }}>
-                          <QuestionIcon />
-                        </Avatar>
-                      </ListItemAvatar>
-                      <ListItemText
-                        primary={question.question?.substring(0, 50) + '...'}
-                        secondary={
-                          <Box>
-                            <Chip 
-                              label={question.correctAnswer || 'A'} 
-                              size="small" 
-                              variant="outlined"
-                            />
-                          </Box>
-                        }
-                      />
-                    </ListItem>
-                  ))}
-                </List>
-              ) : (
-                <Typography color="text.secondary">
-                  Hələ sual yoxdur
-                </Typography>
-              )}
-            </CardContent>
-            <CardActions>
-              <Button 
-                size="small" 
-                onClick={() => handleNavigation('/teacher/questions')}
-                endIcon={<VisibilityIcon />}
-              >
-                Hamısını Gör
-              </Button>
-            </CardActions>
-          </Card>
-        </Grid>
-
-        {/* Recent Subjects */}
-        <Grid item xs={12} md={4}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Son Fənlər
-              </Typography>
-              <Divider sx={{ mb: 2 }} />
-              {statistics.recentSubjects.length > 0 ? (
-                <List>
-                  {statistics.recentSubjects.map((subject, index) => (
-                    <ListItem key={index} sx={{ px: 0 }}>
-                      <ListItemAvatar>
-                        <Avatar sx={{ bgcolor: 'warning.main' }}>
-                          <SubjectIcon />
-                        </Avatar>
-                      </ListItemAvatar>
-                      <ListItemText
-                        primary={subject.name}
-                        secondary={subject.description}
-                      />
-                    </ListItem>
-                  ))}
-                </List>
-              ) : (
-                <Typography color="text.secondary">
-                  Hələ fənn yoxdur
-                </Typography>
-              )}
-            </CardContent>
-            <CardActions>
-              <Button 
-                size="small" 
-                onClick={() => handleNavigation('/teacher/subjects')}
-                endIcon={<VisibilityIcon />}
-              >
-                Hamısını Gör
-              </Button>
-            </CardActions>
           </Card>
         </Grid>
       </Grid>
-    </Container>
+
+      
+     
+    </Box>
   );
 };
 

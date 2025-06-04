@@ -44,8 +44,7 @@ import {
   CheckCircle as ActiveIcon,
   Cancel as InactiveIcon,
 } from '@mui/icons-material';
-
-const API_BASE_URL = 'http://127.0.0.1:8000';
+import { adminAPI } from '../../services/api';
 
 const AcademicTermsPage = () => {
   const [academicTerms, setAcademicTerms] = useState([]);
@@ -76,24 +75,12 @@ const AcademicTermsPage = () => {
   const fetchAcademicTerms = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('adminToken');
-      const response = await fetch(`${API_BASE_URL}/academic-terms`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setAcademicTerms(data.academicTerms || []);
-        setError('');
-      } else {
-        setError('Akademik mövsümlər yüklənərkən xəta baş verdi');
-      }
+      const response = await adminAPI.getAcademicTerms();
+      setAcademicTerms(response.data.academicTerms || []);
+      setError('');
     } catch (error) {
       console.error('Error fetching academic terms:', error);
-      setError('Akademik mövsümlər yüklənərkən xəta baş verdi');
+      setError('Akademik mövsümlər yüklənərkən xəta baş verdi: ' + (error.response?.data?.message || error.message));
       setAcademicTerms([]);
     } finally {
       setLoading(false);
@@ -143,36 +130,11 @@ const AcademicTermsPage = () => {
 
     try {
       setSubmitting(true);
-      const token = localStorage.getItem('adminToken');
       
       if (dialogMode === 'add') {
-        const response = await fetch(`${API_BASE_URL}/academic-terms`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(formData)
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Akademik mövsüm yaradılarkən xəta baş verdi');
-        }
+        await adminAPI.createAcademicTerm(formData);
       } else if (dialogMode === 'edit' && selectedTerm) {
-        const response = await fetch(`${API_BASE_URL}/academic-terms/${selectedTerm._id}`, {
-          method: 'PATCH',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(formData)
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Akademik mövsüm yenilənərkən xəta baş verdi');
-        }
+        await adminAPI.updateAcademicTerm(selectedTerm._id, formData);
       }
       
       await fetchAcademicTerms();
@@ -180,7 +142,7 @@ const AcademicTermsPage = () => {
       setError('');
     } catch (error) {
       console.error('Error saving academic term:', error);
-      setError(error.message || 'Akademik mövsüm saxlanılarkən xəta baş verdi');
+      setError(error.response?.data?.message || 'Akademik mövsüm saxlanılarkən xəta baş verdi');
     } finally {
       setSubmitting(false);
     }
@@ -191,19 +153,7 @@ const AcademicTermsPage = () => {
 
     try {
       setSubmitting(true);
-      const token = localStorage.getItem('adminToken');
-      const response = await fetch(`${API_BASE_URL}/academic-terms/${selectedTerm._id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Akademik mövsüm silinərkən xəta baş verdi');
-      }
+      await adminAPI.deleteAcademicTerm(selectedTerm._id);
       
       await fetchAcademicTerms();
       setDeleteConfirmOpen(false);
@@ -211,7 +161,7 @@ const AcademicTermsPage = () => {
       setError('');
     } catch (error) {
       console.error('Error deleting academic term:', error);
-      setError('Akademik mövsüm silinərkən xəta baş verdi');
+      setError(error.response?.data?.message || 'Akademik mövsüm silinərkən xəta baş verdi');
     } finally {
       setSubmitting(false);
     }

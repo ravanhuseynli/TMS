@@ -44,8 +44,7 @@ import {
   CheckCircle as ActiveIcon,
   Cancel as InactiveIcon,
 } from '@mui/icons-material';
-
-const API_BASE_URL = 'http://127.0.0.1:8000';
+import { adminAPI } from '../../services/api';
 
 const ClassLevelsPage = () => {
   const [classLevels, setClassLevels] = useState([]);
@@ -76,24 +75,12 @@ const ClassLevelsPage = () => {
   const fetchClassLevels = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('adminToken');
-      const response = await fetch(`${API_BASE_URL}/class-levels`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setClassLevels(data.classLevels || []);
-        setError('');
-      } else {
-        setError('Sinif səviyyələri yüklənərkən xəta baş verdi');
-      }
+      const response = await adminAPI.getClassLevels();
+      setClassLevels(response.data.classes || []);
+      setError('');
     } catch (error) {
       console.error('Error fetching class levels:', error);
-      setError('Sinif səviyyələri yüklənərkən xəta baş verdi');
+      setError('Sinif səviyyələri yüklənərkən xəta baş verdi: ' + (error.response?.data?.message || error.message));
       setClassLevels([]);
     } finally {
       setLoading(false);
@@ -143,36 +130,11 @@ const ClassLevelsPage = () => {
 
     try {
       setSubmitting(true);
-      const token = localStorage.getItem('adminToken');
       
       if (dialogMode === 'add') {
-        const response = await fetch(`${API_BASE_URL}/class-levels`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(formData)
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Sinif səviyyəsi yaradılarkən xəta baş verdi');
-        }
+        await adminAPI.createClassLevel(formData);
       } else if (dialogMode === 'edit' && selectedLevel) {
-        const response = await fetch(`${API_BASE_URL}/class-levels/${selectedLevel._id}`, {
-          method: 'PATCH',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(formData)
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Sinif səviyyəsi yenilənərkən xəta baş verdi');
-        }
+        await adminAPI.updateClassLevel(selectedLevel._id, formData);
       }
       
       await fetchClassLevels();
@@ -180,7 +142,7 @@ const ClassLevelsPage = () => {
       setError('');
     } catch (error) {
       console.error('Error saving class level:', error);
-      setError(error.message || 'Sinif səviyyəsi saxlanılarkən xəta baş verdi');
+      setError(error.response?.data?.message || 'Sinif səviyyəsi saxlanılarkən xəta baş verdi');
     } finally {
       setSubmitting(false);
     }
@@ -191,19 +153,7 @@ const ClassLevelsPage = () => {
 
     try {
       setSubmitting(true);
-      const token = localStorage.getItem('adminToken');
-      const response = await fetch(`${API_BASE_URL}/class-levels/${selectedLevel._id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Sinif səviyyəsi silinərkən xəta baş verdi');
-      }
+      await adminAPI.deleteClassLevel(selectedLevel._id);
       
       await fetchClassLevels();
       setDeleteConfirmOpen(false);
@@ -211,7 +161,7 @@ const ClassLevelsPage = () => {
       setError('');
     } catch (error) {
       console.error('Error deleting class level:', error);
-      setError('Sinif səviyyəsi silinərkən xəta baş verdi');
+      setError(error.response?.data?.message || 'Sinif səviyyəsi silinərkən xəta baş verdi');
     } finally {
       setSubmitting(false);
     }
