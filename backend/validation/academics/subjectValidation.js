@@ -13,21 +13,11 @@ const subjectValidationSchema = Joi.object({
       'any.required': 'Subject description is required',
     }),
 
-  teacher: Joi.string(),
-
   academicTerm: Joi.string()
     .required()
     .messages({
       'any.required': 'Academic term is required',
     }),
-
-  createdBy: Joi.string()
-    .required()
-    .messages({
-      'any.required': 'Created by admin is required',
-    }),
-
-  duration: Joi.string().default('3 months'),
 
 }).options({ stripUnknown: true });
 
@@ -41,6 +31,8 @@ const subjectUpdateSchema = Joi.object({
     }),
 
   description: Joi.string(),
+
+  academicTerm: Joi.string(),
 
 }).options({ stripUnknown: true });
 

@@ -13,15 +13,7 @@ const academicTermValidationSchema = Joi.object({
       'any.required': 'Academic term description is required',
     }),
 
-  duration: Joi.string().default('3 months'),
-
-  createdBy: Joi.string()
-    .required()
-    .messages({
-      'any.required': 'Created by admin is required',
-    }),
 }).options({ stripUnknown: true });
-
 
 const academicTermUpdateSchema = Joi.object({
   name: Joi.string()

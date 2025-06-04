@@ -7,19 +7,11 @@ const classLevelValidationSchema = Joi.object({
       'any.required': 'Class level name is required',
     }),
 
-  description: Joi.string(),
-
-  createdBy: Joi.string()
+  description: Joi.string()
     .required()
     .messages({
-      'any.required': 'Created by admin is required',
+      'any.required': 'Class level description is required',
     }),
-
-  students: Joi.array().items(Joi.string()),
-
-  subjects: Joi.array().items(Joi.string()),
-
-  teachers: Joi.array().items(Joi.string()),
 
 }).options({ stripUnknown: true });
 

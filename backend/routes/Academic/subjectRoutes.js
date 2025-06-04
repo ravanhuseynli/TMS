@@ -15,8 +15,9 @@ const router = express.Router();
 
 router.use(protect, restrictTo('admin'));
 
-router.post("/:programId", validationFunction(subjectValidationSchema), createSubject);
-router.get('/', getAllSubjects);
+router.route("/")
+  .post(validationFunction(subjectValidationSchema), createSubject)
+  .get(getAllSubjects);
 
 router.route("/:id")
   .get(getSubject)

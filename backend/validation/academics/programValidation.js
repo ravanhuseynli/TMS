@@ -13,22 +13,6 @@ const programValidationSchema = Joi.object({
       'any.required': 'Program description is required',
     }),
 
-  duration: Joi.string().default('4 years'),
-
-  code: Joi.string(),
-
-  createdBy: Joi.string()
-    .required()
-    .messages({
-      'any.required': 'Created by admin is required',
-    }),
-
-  teachers: Joi.array().items(Joi.string()),
-
-  students: Joi.array().items(Joi.string()),
-
-  subjects: Joi.array().items(Joi.string()),
-
 }).options({ stripUnknown: true });
 
 const programUpdateSchema = Joi.object({

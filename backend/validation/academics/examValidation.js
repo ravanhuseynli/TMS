@@ -85,9 +85,9 @@ const examValidationSchema = Joi.object({
     }),
 
   createdBy: Joi.string()
-    .required()
+    .optional()
     .messages({
-      'any.required': 'Created by teacher is required',
+      'string.base': 'Created by teacher must be a string',
     }),
 
   academicYear: Joi.string()
