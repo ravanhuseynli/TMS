@@ -83,7 +83,7 @@ const Layout = ({ children }) => {
         { path: '/admin/academic-years', label: 'Tədris İlləri', icon: <CalendarMonth /> },
         { path: '/admin/academic-terms', label: 'Akademik Mövsümlər', icon: <DateRange /> },
         { path: '/admin/class-levels', label: 'Siniflər', icon: <Layers /> },
-        { path: '/admin/programs', label: 'Proqramlar', icon: <LibraryBooks /> },
+        { path: '/admin/programs', label: 'İxtisaslar', icon: <LibraryBooks /> },
         { path: '/admin/subjects', label: 'Fənlər', icon: <Book /> },
         { path: '/admin/year-groups', label: 'İl Qrupları', icon: <Groups /> },
         { path: '/admin/exams', label: 'İmtahanlar', icon: <Assignment /> },

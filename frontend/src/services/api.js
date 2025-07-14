@@ -1,11 +1,11 @@
 import axios from 'axios';
 
-// API Base URL
+
 const API_BASE_URL = 'http://127.0.0.1:8000/api/v1';
 
 console.log('API Base URL:', API_BASE_URL);
 
-// Create axios instance
+
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -14,10 +14,10 @@ const api = axios.create({
   timeout: 10000, // 10 seconds timeout
 });
 
-// Request interceptor to add auth token
+
 api.interceptors.request.use(
   (config) => {
-    // Admin, Teacher və Student token-lərini yoxla
+
     const adminToken = localStorage.getItem('adminToken');
     const teacherToken = localStorage.getItem('teacherToken');
     const studentToken = localStorage.getItem('studentToken');
@@ -46,7 +46,7 @@ api.interceptors.response.use(
   (error) => {
     console.error('API Response Error:', error.response?.status, error.message);
     if (error.response?.status === 401) {
-      // Bütün token və user məlumatlarını sil
+      
       localStorage.removeItem('token');
       localStorage.removeItem('adminToken');
       localStorage.removeItem('teacherToken');
@@ -56,7 +56,7 @@ api.interceptors.response.use(
       localStorage.removeItem('teacherUser');
       localStorage.removeItem('studentUser');
       
-      // Only redirect if we're not already on login page
+
       if (window.location.pathname !== '/login') {
         window.location.href = '/login';
       }
@@ -77,7 +77,7 @@ export const authAPI = {
   // Student authentication
   studentLogin: (email, password) => api.post('/students/login', { email, password }),
   
-  // General authentication (if needed)
+
   signup: (userData) => api.post('/signup', userData),
   login: (email, password) => api.post('/login', { email, password }),
 };

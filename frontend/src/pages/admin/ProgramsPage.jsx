@@ -80,7 +80,7 @@ const ProgramsPage = () => {
       setError('');
     } catch (error) {
       console.error('Error fetching programs:', error);
-      setError('Proqramlar yüklənərkən xəta baş verdi: ' + (error.response?.data?.message || error.message));
+      setError('İxtisaslar yüklənərkən xəta baş verdi: ' + (error.response?.data?.message || error.message));
       setPrograms([]);
     } finally {
       setLoading(false);
@@ -118,7 +118,7 @@ const ProgramsPage = () => {
 
   const validateForm = () => {
     const errors = {};
-    if (!formData.name.trim()) errors.name = 'Proqram adı tələb olunur';
+    if (!formData.name.trim()) errors.name = 'İxtisas adı tələb olunur';
     if (!formData.description.trim()) errors.description = 'Təsvir tələb olunur';
     
     setFormErrors(errors);
@@ -182,7 +182,7 @@ const ProgramsPage = () => {
   };
 
   const getStatusText = (program) => {
-    return program.isActive ? 'Aktiv' : 'Deaktiv';
+    return program.isActive ? 'Aktiv' : 'Aktiv';
   };
 
   if (loading) {
@@ -190,7 +190,7 @@ const ProgramsPage = () => {
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
         <CircularProgress />
         <Typography variant="h6" sx={{ ml: 2 }}>
-          Proqramlar yüklənir...
+          İxtisaslar yüklənir...
         </Typography>
       </Box>
     );
@@ -201,10 +201,10 @@ const ProgramsPage = () => {
       {/* Header */}
       <Box mb={4}>
         <Typography variant="h4" component="h1" fontWeight="bold" gutterBottom>
-          Proqramlar
+          İxtisaslar
         </Typography>
         <Typography variant="body1" color="text.secondary">
-          💻 Təhsil proqramlarını idarə edin və yenilərini əlavə edin
+          💻 Təhsil ixtisaslarını idarə edin və yenilərini əlavə edin
         </Typography>
       </Box>
 
@@ -221,7 +221,7 @@ const ProgramsPage = () => {
             <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
-                placeholder="Proqramlar axtar..."
+                placeholder="İxtisaslar axtar..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 InputProps={{
@@ -240,7 +240,7 @@ const ProgramsPage = () => {
                 onClick={() => handleOpenDialog('add')}
                 size="large"
               >
-                Yeni Proqram
+                Yeni İxtisas
               </Button>
             </Grid>
           </Grid>
@@ -253,7 +253,7 @@ const ProgramsPage = () => {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>Proqram</TableCell>
+                <TableCell>İxtisas</TableCell>
                 <TableCell>Təsvir</TableCell>
                 <TableCell>Fənlər</TableCell>
                 <TableCell>Status</TableCell>
@@ -350,15 +350,15 @@ const ProgramsPage = () => {
       {/* Add/Edit Dialog */}
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
         <DialogTitle>
-          {dialogMode === 'add' ? 'Yeni Proqram Əlavə Et' : 
-           dialogMode === 'edit' ? 'Proqramı Düzəliş Et' : 'Proqram Məlumatları'}
+          {dialogMode === 'add' ? 'Yeni İxtisas Əlavə Et' : 
+           dialogMode === 'edit' ? 'İxtisas Düzəliş Et' : 'İxtisas Məlumatları'}
         </DialogTitle>
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 1 }}>
             <Grid item xs={12}>
               <TextField
                 fullWidth
-                label="Proqram Adı"
+                label="İxtisas Adı"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 error={!!formErrors.name}
@@ -379,7 +379,7 @@ const ProgramsPage = () => {
                 disabled={dialogMode === 'view'}
                 multiline
                 rows={3}
-                placeholder="Proqram haqqında əlavə məlumat..."
+                placeholder="İxtisas haqqında əlavə məlumat..."
               />
             </Grid>
           </Grid>

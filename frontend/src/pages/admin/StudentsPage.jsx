@@ -661,8 +661,8 @@ const StudentsPage = () => {
               </Typography>
               {dialogMode === 'add' && (
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  ℹ️ API documentation-a uyğun olaraq yalnız əsas məlumatlar tələb olunur. 
-                  Əlavə məlumatları sonradan düzəliş edə bilərsiniz.
+                   
+                  
                 </Typography>
               )}
             </Grid>

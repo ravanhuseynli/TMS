@@ -167,12 +167,12 @@ const AdminDashboard = () => {
       description: 'Yaradılmış fənn sayı'
     },
     {
-      title: 'Proqramlar',
+      title: 'İxtisaslar',
       value: stats.totalPrograms,
       icon: <LibraryBooks />,
       color: 'secondary',
       link: '/admin/programs',
-      description: 'Tədris proqramı sayı'
+      description: 'Tədris ixtisası sayı'
     },
     {
       title: 'Tədris İlləri',
@@ -425,11 +425,7 @@ const AdminDashboard = () => {
                 ))}
               </Grid>
               
-              <Box sx={{ mt: 3, p: 2, backgroundColor: 'action.hover', borderRadius: 1, textAlign: 'center' }}>
-                <Typography variant="body2" color="text.secondary">
-                  🔄 Real vaxt yenilənmələr aktiv • 📊 {recentActivities.length} fəaliyyət
-                </Typography>
-              </Box>
+              
             </CardContent>
           </Card>
         </Grid>
